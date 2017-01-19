@@ -1,0 +1,44 @@
+<style lang="css">
+</style>
+<template>
+      <view>wepy-com-charts 微信小程序图表测试</view>
+      <lineChart :collection.sync="collection" :labels="labels" showFollowYAxes="true"></lineChart>
+</template>
+
+<script>
+    import wepy from 'wepy'
+    import Chart from 'wepy-com-charts'
+    export default class Index extends wepy.page {
+
+        config = {
+            "navigationBarTitleText": "wepy-com-charts"
+        }
+        components = {
+            lineChart:Chart
+        }
+
+        data = {
+            collection:[
+                {
+                  id:0,
+                  name:'line1',
+                  data:[
+                      {key:'2016',value:50},
+                      {key:'2017',value:70},
+                      {key:'2018',value:100},
+                      {key:'2019',value:105},
+                      {key:'2020',value:150},
+                  ]
+                }
+            ],
+            labels:["2016","2017","2018","2019","2020"]
+        }
+        methods = {}
+
+        events = {}
+
+        onReady(){
+            this.$invoke('lineChart','draw')
+        }
+    }
+</script>
