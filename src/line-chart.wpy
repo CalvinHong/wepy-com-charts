@@ -168,6 +168,9 @@ export default class extends wepy.component {
             positionX:{
                 default:0
             },
+            positionY:{
+                default:0
+            },
             detailPanelShow:{
                 default:true
             }
@@ -186,9 +189,10 @@ export default class extends wepy.component {
             activeAction(e){
                 if(this._shouldRender() && e.touches){
                     let {x:tX}= e.touches[0],{xLabelPoint} = this.params
+                    let {positionX} = this
                     //找最近的点
                     let fX = xLabelPoint.reduce(function(prev, curr){
-                        return Math.abs(curr - tX) < Math.abs(prev - tX) ? curr : prev
+                        return Math.abs(curr + positionX - tX) < Math.abs(prev + positionX - tX) ? curr : prev
                     })
                     let findIndex = xLabelPoint.indexOf(fX)
                     this.active = findIndex
@@ -326,9 +330,9 @@ export default class extends wepy.component {
                           ctx.closePath()
                         }
 
-                        let xLabelShow = typeof onXLabelFilter == 'function' ? onXLabelFilter(key,index) : true
+                        let xLabelShow = typeof onXLabelFilter == 'function' ? onXLabelFilter(key,index) : false
                         let axesXShow = typeof onXAxesFilter == 'function' ? onXAxesFilter(key,index) : false
-                        if(axesXShow){
+                        if(onXAxesFilter == 'enable' || axesXShow){
                           ctx.beginPath()
                           ctx.setStrokeStyle(axesColor)
                           ctx.moveTo(x,startY)
@@ -337,7 +341,7 @@ export default class extends wepy.component {
                           ctx.closePath()
                         }
                         // console.log('%s - %s',xLabelShow,!isRenderLabel[key])
-                        if(xLabelShow && !isRenderLabel[key]){
+                        if( (onXLabelFilter == 'enable' || xLabelShow) && !isRenderLabel[key]){
                           ctx.beginPath()
                           ctx.setFillStyle(xLabelColor)
                           ctx.setFontSize(10)

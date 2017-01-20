@@ -6,7 +6,7 @@
 </style>
 <template>
       <view class="demo">wepy-com-charts demo</view>
-      <lineChart :collection.sync="collection" :labels="labels" ></lineChart>
+      <lineChart :collection.sync="collection" :labels="labels" onXLabelFilter="enable"></lineChart>
 </template>
 
 <script>
