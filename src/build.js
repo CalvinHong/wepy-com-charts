@@ -23,8 +23,12 @@ function genFile(filePath){
 }
 
 (async ()=>{
-  const fs = makePromiseRange(FileSystem,['readdir','copy'],fs)
+  const fs = makePromiseRange(FileSystem,['readdir','copy','unlink'],fs)
   try{
+      let targetDir = await fs.readdir(targetPath)
+      targetDir.map( async (el)=>{
+          await fs.unlink(path.resolve(targetPath,el))
+      })
       let dir = await fs.readdir(sourcePath)
       dir.filter(el => el.match(/\.wpy/)).map(async (el)=>{
           // console.log(path.join(sourcePath,el))

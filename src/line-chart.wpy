@@ -9,9 +9,75 @@
       position:relative;
       background-color:transparent;
     }
+    .canvas-detail-panel{
+      display:block;
+      padding:15px;
+    }
+
+    .canvas-detail-panel
+    .item{
+        display:inline-block;
+        width:50%;
+        padding-bottom:6px;
+        font-size:12px;
+        color:#353535;
+        overflow:hidden;
+        white-space: nowrap;
+        vertical-align:top;
+    }
+    .canvas-detail-panel
+    .item>view{
+        width:50%;
+        display:inline-block;
+        overflow:visible;
+        white-space: nowrap;
+        vertical-align:middle;
+    }
+    .canvas-detail-panel
+    .item>view.disabled{
+        opacity:0.5;
+    }
+    .canvas-detail-panel
+    .arc{
+      display:inline-block;
+      width:15rpx;
+      height:15rpx;
+      border:2px solid #ffffff;
+      border-radius:100%;
+      padding:0;
+      vertical-align:middle;
+      margin-right: 5px;
+    }
+    .canvas-detail-panel
+    .text{
+      display:inline-block;
+      vertical-align:middle;
+      white-space:pre-wrap;
+      word-wrap:break-word;
+
+    }
+    .canvas-detail-panel
+    .value{
+      text-indent:25px;
+    }
 </style>
 <template>
-<view class="canvas-container" style="height: {{height}}px;width: {{width}}px;">
+
+<view class="canvas-container">
+    <view class="canvas-detail-panel" wx:if="{{activeData.length>0}}">
+          <block wx:for="{{activeData}}" wx:key="name">
+              <view class="item {{!item.value ? 'disabled':''}}">
+                  <view class="name">
+                    <view class="arc" style="border-color:{{item.color}};"></view>
+                    <view class="text">{{item.name}}</view>
+                  </view>
+                  <view class="value">
+                    <block wx:if="{{item.value}}">{{item.value}}</block>
+                    <block wx:if="{{!item.value}}">-</block>
+                  </view>
+              </view>
+          </block>
+    </view>
     <canvas class="canvas" canvas-id="{{lineId}}" wx:if="{{lineId}}" style="width: {{width}}px; height: {{height}}px;" binderror="canvasError"></canvas>
     <canvas class="canvas" canvas-id="{{topId}}" wx:if="{{topId}}"  style="width: {{width}}px; height: {{height}}px;margin-top:-{{height}}px;" binderror="canvasError" bindtouchend="activeEnd" bindtouchstart="activeAction" bindtouchmove="activeAction"></canvas>
 </view>
@@ -101,13 +167,17 @@ export default class extends wepy.component {
             //画板的开始位置
             positionX:{
                 default:0
+            },
+            detailPanelShow:{
+                default:true
             }
         }
 
         data = {
             lineId:'',
             cmpId:'',
-            topId:''
+            topId:'',
+            activeData:[]
         }
 
         ctxs = {}
@@ -226,9 +296,9 @@ export default class extends wepy.component {
         _draw(){
             let {
                   labels,
-                  params:{ctx,point=[],dataEndY,startX,startY,endX,arcR,arcRR,sAngle,eAngle,maxValue,minValue},
+                  params:{ctx,point=[],dataEndY,startX,startY,endX,endY,arcR,arcRR,sAngle,eAngle,maxValue,minValue},
                   axesColor,lineId,showFollowYAxes,showFollowXAxes,xLabelColor,yLabelColor,onXLabelFilter,onXAxesFilter,
-                  onYLabelFilter,onYAxesFilter,yLabelRows,yLabelFormat
+                  onYLabelFilter,onYAxesFilter,yLabelRows,yLabelFormat,paddingY
             } = this
 
             let isRenderLabel = {},singlePoint = point.length == 1
@@ -256,7 +326,7 @@ export default class extends wepy.component {
                           ctx.closePath()
                         }
 
-                        let xLabelShow = typeof onXLabelFilter == 'function' ? onXLabelFilter(key,index) : singlePoint
+                        let xLabelShow = typeof onXLabelFilter == 'function' ? onXLabelFilter(key,index) : true
                         let axesXShow = typeof onXAxesFilter == 'function' ? onXAxesFilter(key,index) : false
                         if(axesXShow){
                           ctx.beginPath()
@@ -274,7 +344,7 @@ export default class extends wepy.component {
                           let offset = 6 * key.length/2
                           let tX = Math.min(x - offset,endX - offset - arcRR)
                           tX = Math.max(startX - arcRR,tX)
-                          ctx.fillText(key,tX,dataEndY)
+                          ctx.fillText(key,tX,endY+paddingY)
                           ctx.fill()
                           ctx.closePath()
                           isRenderLabel[key] = true
@@ -319,7 +389,7 @@ export default class extends wepy.component {
                         let yLabelShow = typeof onYLabelFilter == 'function' ? onYLabelFilter(v,index,isMin, isMax) : false
                         //y轴坐标线是否显示
                         let axesYShow = typeof onYAxesFilter == 'function' ? onYAxesFilter(v,index,isMin, isMax) : false
-                        if(axesYShow){
+                        if(onYAxesFilter === 'enable' || axesYShow){
                             ctx.beginPath()
                             ctx.setStrokeStyle(axesColor)
                             ctx.moveTo(startX ,v)
@@ -327,7 +397,7 @@ export default class extends wepy.component {
                             ctx.stroke()
                             ctx.closePath()
                         }
-                        if(yLabelShow){
+                        if(onYLabelFilter === 'enable' || yLabelShow){
                             //避免覆盖圆点
                             let isRepeat = false
                             point.map( ({pos})=>{
@@ -362,20 +432,33 @@ export default class extends wepy.component {
           ctx.setLineWidth(this.lineWidth)
           let {params:{sAngle,eAngle,point,arcR}} = this
           //焦点的列的圆点变大
-          point.map( ({pos,color}) => pos.map( (pt,index) => {
-                if(pt && index == this.active){
-                    let [x,y]=pt
-                    ctx.beginPath()
-                    ctx.setStrokeStyle(color)
-                    ctx.arc(x,y,arcR * 2,sAngle,eAngle)
-                    ctx.stroke()
-                    ctx.setFillStyle('white')
-                    ctx.fill()
-                    ctx.closePath()
-                }
-          }) )
+          let activeData=[]
+          point.map( ({pos,color,name}) =>{
+              let active = {name,color}
+              pos.map( (pt,index) => {
+                    if(pt && index == this.active){
+                        let [x,y,{value}]=pt
+                        ctx.beginPath()
+                        ctx.setStrokeStyle(color)
+                        ctx.arc(x,y,arcR * 2,sAngle,eAngle)
+                        ctx.stroke()
+                        ctx.setFillStyle('white')
+                        ctx.fill()
+                        ctx.closePath()
+                        active.value = value
+                    }
+              })
+              activeData.push(active)
+          })
 
           ctx.draw()
+
+          //详细面板
+          if(this.detailPanelShow){
+              //activeData
+              this.activeData = activeData
+              this.$apply()
+          }
 
           typeof this.onActived == 'function'
           && this.onActived.call(

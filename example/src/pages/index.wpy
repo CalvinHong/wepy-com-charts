@@ -1,8 +1,12 @@
 <style lang="css">
+    .demo{
+        padding:30px;
+        text-align: center;
+    }
 </style>
 <template>
-      <view>wepy-com-charts 微信小程序图表测试</view>
-      <lineChart :collection.sync="collection" :labels="labels" showFollowYAxes="true"></lineChart>
+      <view class="demo">wepy-com-charts demo</view>
+      <lineChart :collection.sync="collection" :labels="labels" ></lineChart>
 </template>
 
 <script>
@@ -11,7 +15,7 @@
     export default class Index extends wepy.page {
 
         config = {
-            "navigationBarTitleText": "wepy-com-charts"
+            "navigationBarTitleText": "demo"
         }
         components = {
             lineChart:Chart
@@ -20,14 +24,33 @@
         data = {
             collection:[
                 {
-                  id:0,
                   name:'line1',
                   data:[
                       {key:'2016',value:50},
-                      {key:'2017',value:70},
+                      {key:'2017',value:99},
                       {key:'2018',value:100},
                       {key:'2019',value:105},
                       {key:'2020',value:150},
+                  ]
+                },
+                {
+                  name:'line2',
+                  data:[
+                      {key:'2016',value:16},
+                      {key:'2017',value:80},
+                      {key:'2018',value:120},
+                      {key:'2019',value:166},
+                      {key:'2020',value:200},
+                  ]
+                },
+                {
+                  name:'line3',
+                  data:[
+                      {key:'2016',value:66},
+                      {key:'2017',value:88},
+                      {key:'2018',value:140},
+                      {key:'2019',value:125},
+                      {key:'2020',value:256},
                   ]
                 }
             ],

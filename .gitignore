@@ -1,6 +1,7 @@
 node_modules
 lib
 .DS_Store
+npm-debug*
 example/dist
 example/.wepycache
-example/npm-debug.*
+example/npm-debug*

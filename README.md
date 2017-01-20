@@ -1,5 +1,5 @@
 # 微信小程序 wepyjs 图表控件 `wepy-com-charts`
-
+![](http://ok24hjp0j.bkt.clouddn.com/chart-demo.gif)
 ## 说明
 基于微信小程序canvas开发的图表控件，适用于[wepy](https://github.com/wepyjs/wepy)框架
 > 暂时只有折线图，后续提供更多的图表
