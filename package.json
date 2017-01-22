@@ -1,8 +1,8 @@
 {
   "name": "wepy-com-charts",
-  "version": "v1.0.4",
+  "version": "v1.0.5",
   "description": "微信小程序图表控件，适用于wepyjs框架",
-  "main": "lib/line-chart.wpy",
+  "main": "src/line-chart.wpy",
   "scripts": {
     "build": "babel-node -- ./src/build.js",
     "test": "echo \"Error: no test specified\" && exit 1"

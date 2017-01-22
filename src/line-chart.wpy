@@ -19,11 +19,11 @@
         display:inline-block;
         width:50%;
         padding-bottom:6px;
-        font-size:12px;
+        font-size:25rpx;
         color:#353535;
-        overflow:hidden;
         white-space: nowrap;
         vertical-align:top;
+        overflow:visible;
     }
     .canvas-detail-panel
     .item>view{
@@ -31,10 +31,10 @@
         display:inline-block;
         overflow:visible;
         white-space: nowrap;
-        vertical-align:middle;
+        vertical-align:top;
     }
     .canvas-detail-panel
-    .item>view.disabled{
+    .item.disabled{
         opacity:0.5;
     }
     .canvas-detail-panel
@@ -45,28 +45,29 @@
       border:2px solid #ffffff;
       border-radius:100%;
       padding:0;
-      vertical-align:middle;
+      vertical-align:top;
       margin-right: 5px;
     }
     .canvas-detail-panel
     .text{
       display:inline-block;
-      vertical-align:middle;
+      vertical-align:top;
       white-space:pre-wrap;
       word-wrap:break-word;
-
+      margin-top: -3px;
     }
     .canvas-detail-panel
     .value{
       text-indent:25px;
+      margin-top: -3px;
     }
 </style>
 <template>
 
 <view class="canvas-container">
-    <view class="canvas-detail-panel" wx:if="{{activeData.length>0}}">
+    <view class="canvas-detail-panel" wx:if="{{showDetailPanel && activeData.length>0}}">
           <block wx:for="{{activeData}}" wx:key="name">
-              <view class="item {{!item.value ? 'disabled':''}}">
+              <view class="item {{item.value ? '':'disabled'}}">
                   <view class="name">
                     <view class="arc" style="border-color:{{item.color}};"></view>
                     <view class="text">{{item.name}}</view>
@@ -171,8 +172,23 @@ export default class extends wepy.component {
             positionY:{
                 default:0
             },
-            detailPanelShow:{
-                default:true
+            showDetailPanel:{
+                default:false
+            },
+            showMaxYLabel:{
+                default:false
+            },
+            showMaxYAxes:{
+                default:false
+            },
+            showMinYLabel:{
+                default:false
+            },
+            showMinYAxes:{
+                default:false
+            },
+            valuePadding:{
+                default:0
             }
         }
 
@@ -235,28 +251,32 @@ export default class extends wepy.component {
             let params = []
             params.maxValue = this._getMaxValue()
             params.minValue = this._getMinValue()
-            params.labelPadding = 30
-            params.labelPadding = 30
-            //范围坐标
-            params.startX = this.paddingX
-            params.endX = this.width - this.paddingX
-            params.startY = this.paddingY
-            params.endY = this.height - this.paddingY - params.labelPadding
-            //y轴坐标比例
-            params.dataEndY = (params.endY - this.paddingY)
-            params.scaleY =  params.dataEndY / params.maxValue
-            //x轴坐标间隔
-            params.colWidth =  (this.width - this.paddingX * 2) / (this.labels.length - 1)
-            // console.log(colWidth)
+            // params.labelPadding = 30
+            params.xLabelHeight = 20
+            this.valuePadding = Number(this.valuePadding)
             params.arcR = this.lineWidth * 2
             //圆点实际周径
             params.arcRR = (params.arcR + this.lineWidth)
+            //范围坐标
+            params.startX = this.paddingX
+            params.endX = this.width - this.paddingX - params.arcRR
+            params.startY = this.paddingY + params.arcRR
+            params.endY = this.height - this.paddingY - params.arcRR - params.xLabelHeight
+            //y轴坐标比例 posRange/dataRange = y/v   y = (posRange/dataRange*v)
+            // params.dataRangeY = (params.endY - this.paddingY - params.arcRR)
+            params.posRange = this.height - this.paddingY*2 - params.arcRR*2 - params.xLabelHeight
+            params.dataRange = params.maxValue - params.minValue
+            params.scaleY =  params.posRange / params.maxValue
+            //x轴坐标间隔
+            params.colWidth =  (this.width - this.paddingX * 2) / (this.labels.length - 1)
+            // console.log(colWidth)
 
             params.sAngle = 0*Math.PI
             params.eAngle = 2*Math.PI
 
             params.point = []
-
+            params.maxYPos= []
+            params.minYPos= []
             //收集所有的X轴label的点
             params.xLabelPoint = []
             //主线canvas
@@ -266,9 +286,9 @@ export default class extends wepy.component {
         }
         //收集数据点
         _fetchPoint(){
-            let { collection,labels,colors,params:{ minValue,maxValue,scaleY,startX,startY,dataEndY,endX,endY,arcRR,colWidth },paddingY } = this
+            let { collection,labels,colors,height,params:{ minValue,maxValue,scaleY,startX,startY,endX,endY,arcRR,colWidth,dataRange },paddingY } = this
             //收集所有点
-            let point = [],xLabelPoint=new Array(labels.length)
+            let point = [],xLabelPoint=new Array(labels.length),maxYPos,minYPos
 
             collection.map( ({id,name,data},collIndex) => {
                   if(data.length > 0){
@@ -276,15 +296,22 @@ export default class extends wepy.component {
                       labels.map( (label,lbIndex) => {
                            let find = data.find( el => el.key == label )
                            if(find){
-                             let {value,key} = find
+                             let {value,key,ext={}} = find
                              value = Number(value)
-                            //  console.log('value:%s',value)
-                             let [x,y] = [startX + lbIndex*colWidth , endY - value * scaleY]
+                             let valueAxes = value * scaleY
+                            //  console.log('valueAxes:%s',valueAxes)
+                             let [x,y] = [startX + lbIndex*colWidth , endY - valueAxes]
                              x = Math.min(x,endX)
                              x = Math.max(startX,x)
                              y = Math.min(y,endY)
                              y = Math.max(startY,y)
-                             pt.pos[lbIndex] = [x,y,{value,key,name}]
+                             if(value == maxValue){
+                                 maxYPos = y
+                             }
+                             if(value == minValue){
+                                 minYPos = y
+                             }
+                             pt.pos[lbIndex] = [x,y,{value,key,name,ext}]
                              xLabelPoint[lbIndex]=x
                            }
                       })
@@ -293,6 +320,9 @@ export default class extends wepy.component {
               })
               this.params.point = point
               this.params.xLabelPoint = xLabelPoint
+              this.params.maxYPos = maxYPos
+              this.params.minYPos = minYPos
+
               return point.length
         }
 
@@ -300,13 +330,46 @@ export default class extends wepy.component {
         _draw(){
             let {
                   labels,
-                  params:{ctx,point=[],dataEndY,startX,startY,endX,endY,arcR,arcRR,sAngle,eAngle,maxValue,minValue},
+                  params:{ctx,point=[],startX,startY,endX,endY,arcR,arcRR,sAngle,eAngle,maxValue,minValue,maxYPos,minYPos,xLabelHeight},
                   axesColor,lineId,showFollowYAxes,showFollowXAxes,xLabelColor,yLabelColor,onXLabelFilter,onXAxesFilter,
-                  onYLabelFilter,onYAxesFilter,yLabelRows,yLabelFormat,paddingY
+                  onYLabelFilter,onYAxesFilter,yLabelRows,yLabelFormat,paddingY,showMaxYLabel,showMaxYAxes,showMinYAxes,showMinYLabel,valuePadding
             } = this
 
             let isRenderLabel = {},singlePoint = point.length == 1
 
+            if(showMaxYAxes){
+                ctx.beginPath()
+                ctx.setStrokeStyle(axesColor)
+                ctx.moveTo(startX,maxYPos)
+                ctx.lineTo(endX,maxYPos)
+                ctx.stroke()
+                ctx.closePath()
+            }
+            if(showMinYAxes){
+                ctx.beginPath()
+                ctx.setStrokeStyle(axesColor)
+                ctx.moveTo(startX,minYPos)
+                ctx.lineTo(endX,minYPos)
+                ctx.stroke()
+                ctx.closePath()
+            }
+            //是否显示最高值Y轴label
+            if(showMaxYLabel && !this._isYLabelRepeat(maxYPos+4)){
+                ctx.beginPath()
+                ctx.setFillStyle(yLabelColor)
+                ctx.setFontSize(10)
+                ctx.fillText(typeof yLabelFormat == 'function' ? this.yLabelFormat.call(this.$parents,maxValue) : maxValue,startX - arcRR,maxYPos+4)
+                ctx.fill()
+                ctx.closePath()
+            }
+            if(showMinYLabel && !this._isYLabelRepeat(minYPos-8)){
+                ctx.beginPath()
+                ctx.setFillStyle(yLabelColor)
+                ctx.setFontSize(10)
+                ctx.fillText(typeof yLabelFormat == 'function' ? this.yLabelFormat.call(this.$parents,minValue) : minValue,startX - arcRR,minYPos-8)
+                ctx.fill()
+                ctx.closePath()
+            }
             point.map( line => {
                 let {pos,color} = line
                 //紧随坐标和字
@@ -316,7 +379,7 @@ export default class extends wepy.component {
                         if(showFollowYAxes){
                           ctx.beginPath()
                           ctx.setStrokeStyle(axesColor)
-                          ctx.moveTo(x,dataEndY)
+                          ctx.moveTo(x,endY)
                           ctx.lineTo(x,y)
                           ctx.stroke()
                           ctx.closePath()
@@ -335,8 +398,8 @@ export default class extends wepy.component {
                         if(onXAxesFilter == 'enable' || axesXShow){
                           ctx.beginPath()
                           ctx.setStrokeStyle(axesColor)
-                          ctx.moveTo(x,startY)
-                          ctx.lineTo(x,dataEndY)
+                          ctx.moveTo(x,0)
+                          ctx.lineTo(x,endY)
                           ctx.stroke()
                           ctx.closePath()
                         }
@@ -346,9 +409,9 @@ export default class extends wepy.component {
                           ctx.setFillStyle(xLabelColor)
                           ctx.setFontSize(10)
                           let offset = 6 * key.length/2
-                          let tX = Math.min(x - offset,endX - offset - arcRR)
+                          let tX = Math.min(x - offset,endX - offset)
                           tX = Math.max(startX - arcRR,tX)
-                          ctx.fillText(key,tX,endY+paddingY)
+                          ctx.fillText(key,tX,endY + xLabelHeight + arcRR)
                           ctx.fill()
                           ctx.closePath()
                           isRenderLabel[key] = true
@@ -384,11 +447,11 @@ export default class extends wepy.component {
                 //y轴坐标
                 //y轴label
                 {
-                    let step = yLabelRows ? dataEndY / yLabelRows : yLabelRows
+                    let step = yLabelRows ? endY / yLabelRows : yLabelRows
                     let index = 0
                     let v = startY
-                    while(v <= dataEndY){
-                        let isMin = v == startY,isMax = v == dataEndY
+                    while(v <= endY){
+                        let isMin = v == startY,isMax = v == endY
                         //y轴坐标是否显示
                         let yLabelShow = typeof onYLabelFilter == 'function' ? onYLabelFilter(v,index,isMin, isMax) : false
                         //y轴坐标线是否显示
@@ -403,15 +466,7 @@ export default class extends wepy.component {
                         }
                         if(onYLabelFilter === 'enable' || yLabelShow){
                             //避免覆盖圆点
-                            let isRepeat = false
-                            point.map( ({pos})=>{
-                                let [x,y] = pos[0] || []
-                                if(Math.abs(y - v) < 8){
-                                    isRepeat = true
-                                    return false
-                                }
-                            })
-                            if(!isRepeat){
+                            if(!this._isYLabelRepeat(v)){
                                 let label = typeof yLabelFormat == 'function' ? yLabelFormat(v) : v
                                 ctx.beginPath()
                                 ctx.setFillStyle(yLabelColor)
@@ -429,12 +484,25 @@ export default class extends wepy.component {
 
         }
 
+        _isYLabelRepeat(v){
+            let {params:{point}} = this
+            let isRepeat = false
+            point.map( ({pos})=>{
+                let [x,y] = pos[0] || []
+                if(Math.abs(y - v) < 8){
+                    isRepeat = true
+                    return false
+                }
+            })
+            return isRepeat
+        }
+
 
 
         _activeAction(){
           let ctx = wx.createCanvasContext(this.topId)
-          ctx.setLineWidth(this.lineWidth)
-          let {params:{sAngle,eAngle,point,arcR}} = this
+          ctx.setLineWidth(this.lineWidth*2)
+          let {params:{sAngle,eAngle,point,arcR},yLabelFormat} = this
           //焦点的列的圆点变大
           let activeData=[]
           point.map( ({pos,color,name}) =>{
@@ -449,7 +517,7 @@ export default class extends wepy.component {
                         ctx.setFillStyle('white')
                         ctx.fill()
                         ctx.closePath()
-                        active.value = value
+                        active.value = typeof yLabelFormat =="function" ? yLabelFormat.call(this.$parents,value):value
                     }
               })
               activeData.push(active)
@@ -458,7 +526,7 @@ export default class extends wepy.component {
           ctx.draw()
 
           //详细面板
-          if(this.detailPanelShow){
+          if(this.showDetailPanel){
               //activeData
               this.activeData = activeData
               this.$apply()
@@ -468,17 +536,18 @@ export default class extends wepy.component {
           && this.onActived.call(
             this.$parent,
             point.map( ({pos},index) => pos[this.active] ? pos[this.active][2]:null),
+            this.labels[this.active],
            this.active)
 
         }
 
         _getMaxValue(){
-            let data = this.collection.map( item => Math.max(...item.data.map( i => Number(i.value))) ) || []
+            let data = this.collection.map( item => Math.max(...item.data.filter(i => i && i.value !== undefined).map( i => Number(i.value))) ) || []
             return Math.max(...data)
         }
 
         _getMinValue(){
-          let data = this.collection.map( item => Math.min(...item.data.map( i => Number(i.value))) ) || []
+          let data = this.collection.map( item => Math.min(...item.data.filter(i => i && i.value !== undefined).map( i => Number(i.value))) ) || []
           return Math.min(...data)
         }
 

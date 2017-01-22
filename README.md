@@ -33,18 +33,6 @@ npm install wepy-com-charts --save
 </script>
 ```
 
-> PS:如果wepy组件后缀名改成了`vue`的可以用以下方法引用
-
-```javascript
-<template>
-    <lineChart></lineChart>
-</template>
-<script>
-    import Charts from 'wepy-com-charts/lib/line-chart.vue';
-</script>
-
-```
-
 ### 调用方法
 ```javascript
 //调用draw方法可以产出图像
@@ -78,4 +66,4 @@ this.$invoke('lineChart', 'draw');
 | onActived       | null           | function            | 否   | 手指选中某一列时触发的回调函数，可以获取该列所有点的数据                         |
 | positionX       | 0              | number              | 否   | 画板x轴位置，用于手指拖到计算                                                    |
 | positionY       | 0              | number              | 否   | 画板y轴位置，用于手指拖到计算                                                    |
-| detailPanelShow | true           | boolean             | 否   | 是否显示详细面板                                                                 |
+| showDetailPanel | true           | boolean             | 否   | 是否显示详细面板                                                                 |
