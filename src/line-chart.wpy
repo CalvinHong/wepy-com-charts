@@ -233,9 +233,8 @@ export default class extends wepy.component {
 
         draw(){
           if(this._shouldRender()){
-            if(this.active ===null){
-                this.active = this.labels.length - 1
-            }
+            this.active = this.labels.length - 1
+            this.$apply()
             let error = [this._initParams,this._fetchPoint,this._draw].find( fn => fn.call(this) === false )
             if(!error){
                 this._activeAction()
