@@ -1,5 +1,7 @@
 # 微信小程序 wepyjs 图表控件 `wepy-com-charts`
 
+## **已停止维护，请谨慎使用！！**
+
 ![](http://ok24hjp0j.bkt.clouddn.com/chart-demo.gif)
 
 ## 说明
